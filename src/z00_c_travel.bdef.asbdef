@@ -1,6 +1,8 @@
 projection;
 strict ( 2 );
 
+use draft;
+
 define behavior for Z00_C_TRAVEL //alias <alias_name>
 use etag
 {
@@ -10,4 +12,23 @@ use etag
 
   use action cancel_travel;
 
+  use action checkCustomer;
+  use action adjustDuration;
+
+  side effects
+  {
+    determine action checkCustomer
+    executed on field CustomerId
+    affects messages;
+
+    determine action adjustDuration
+    executed on field BeginDate, field EndDate
+    affects field Duration, messages;
+  }
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Prepare;
+  use action Resume;
 }

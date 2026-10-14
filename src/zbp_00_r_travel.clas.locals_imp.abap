@@ -30,6 +30,8 @@ CLASS lhc_Z00_R_TRAVEL DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS get_instance_features FOR INSTANCE FEATURES
       keys REQUEST requested_features FOR Travel RESULT result.
+    METHODS determineduration FOR DETERMINE ON SAVE
+       keys FOR travel~determineduration.
 
     METHODS earlynumbering_create FOR NUMBERING
        entities FOR CREATE Travel.
@@ -91,6 +93,8 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
 
   METHOD validateDescription.
 
+    CONSTANTS c_area TYPE string VALUE `DESC`.
+
     READ ENTITIES OF Z00_R_Travel IN LOCAL MODE
         ENTITY Travel
             FIELDS ( Description )
@@ -99,13 +103,18 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
 
     LOOP AT travels ASSIGNING FIELD-SYMBOL(<travel>).
 
+      APPEND VALUE #( %tky = <travel>-%tky
+                      %state_area = c_area )
+          TO reported-travel.
+
       IF <travel>-Description IS INITIAL.
         APPEND VALUE #( %tky = <travel>-%tky )
             TO failed-travel.
 
         APPEND VALUE #( %tky = <travel>-%tky
                         %msg = NEW /lrn/cm_s4d437( /lrn/cm_s4d437=>field_empty )
-                        %element-Description = if_abap_behv=>mk-on )
+                        %element-Description = if_abap_behv=>mk-on
+                        %state_area = c_area )
             TO reported-travel.
 
       ENDIF.
@@ -116,6 +125,8 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
 
   METHOD validateCustomer.
 
+    CONSTANTS c_area TYPE string VALUE `CUST`.
+
     READ ENTITIES OF Z00_R_Travel IN LOCAL MODE
        ENTITY Travel
            FIELDS ( CustomerId )
@@ -123,13 +134,19 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
            RESULT DATA(travels).
 
     LOOP AT travels ASSIGNING FIELD-SYMBOL(<travel>).
+
+      APPEND VALUE #( %tky = <travel>-%tky
+                  %state_area = c_area )
+      TO reported-travel.
+
       IF <travel>-CustomerId IS INITIAL.
         APPEND VALUE #( %tky = <travel>-%tky )
             TO failed-travel.
 
         APPEND VALUE #( %tky = <travel>-%tky
                         %msg = NEW /lrn/cm_s4d437( /lrn/cm_s4d437=>field_empty )
-                        %element-CustomerId = if_abap_behv=>mk-on )
+                        %element-CustomerId = if_abap_behv=>mk-on
+                        %state_area = c_area )
             TO reported-travel.
 
       ELSE.
@@ -146,7 +163,8 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
           APPEND VALUE #( %tky = <travel>-%tky
                           %msg = NEW /lrn/cm_s4d437( textid = /lrn/cm_s4d437=>customer_not_exist
                                                      customerid = <travel>-CustomerId )
-                          %element-CustomerId = if_abap_behv=>mk-on )
+                          %element-CustomerId = if_abap_behv=>mk-on
+                          %state_area = c_area )
              TO reported-travel.
         ENDIF.
 
@@ -307,6 +325,27 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
     LOOP AT travels ASSIGNING FIELD-SYMBOL(<travel>).
       APPEND CORRESPONDING #( <travel> ) TO result ASSIGNING FIELD-SYMBOL(<result>).
 
+      IF <travel>-%is_draft = if_abap_behv=>mk-on.
+        READ ENTITIES OF Z00_R_Travel IN LOCAL MODE
+          ENTITY Travel
+          FIELDS ( BeginDate EndDate )
+          WITH VALUE #( ( %key = <travel>-%key
+                          %is_draft = if_abap_behv=>mk-off ) )
+          RESULT DATA(travels_active).
+
+        IF travels_active IS NOT INITIAL.
+          <travel>-BeginDate = travels_active[ 1 ]-BeginDate.
+          <travel>-EndDate   = travels_active[ 1 ]-EndDate.
+        ELSE.
+          CLEAR <travel>-BeginDate.
+          CLEAR <travel>-EndDate.
+        ENDIF.
+
+*        IF lines( travels_active ) GT 0.
+*        IF line_exists( travels_active[ 1 ] )
+
+      ENDIF.
+
       IF <travel>-Status = 'C' OR
        ( <travel>-EndDate IS NOT INITIAL AND
          <travel>-EndDate < cl_abap_context_info=>get_system_date( ) ).
@@ -336,6 +375,25 @@ CLASS lhc_Z00_R_TRAVEL IMPLEMENTATION.
 
 
     ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD determineDuration.
+
+    READ ENTITIES OF Z00_R_Travel IN LOCAL MODE
+    ENTITY Travel
+    FIELDS ( BeginDate EndDate )
+    WITH CORRESPONDING #( keys )
+    RESULT DATA(travels).
+
+    LOOP AT travels ASSIGNING FIELD-SYMBOL(<travel>).
+      <travel>-Duration = <travel>-EndDate - <travel>-BeginDate.
+    ENDLOOP.
+
+    MODIFY ENTITIES OF Z00_R_Travel IN LOCAL MODE
+        ENTITY Travel
+        UPDATE FIELDS ( Duration )
+        WITH CORRESPONDING #( travels ).
 
   ENDMETHOD.
 

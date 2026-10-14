@@ -58,6 +58,11 @@ annotate view Z00_C_TRAVEL with
        }
   EndDate;
 
+  @UI: { lineItem:       [ { position: 35, importance: #LOW } ],
+         identification: [ { position: 65, importance: #LOW } ] }
+  @EndUserText.label: 'Duration (days)'
+  Duration;
+
   @UI: { lineItem:       [ { position: 10, importance: #HIGH },
                            { type:       #FOR_ACTION,
                              dataAction: 'cancel_travel',
@@ -66,6 +71,7 @@ annotate view Z00_C_TRAVEL with
                            { type:       #FOR_ACTION,
                              dataAction: 'cancel_travel',
                              label:      'Cancel the Travel' } ]       }
+
   Status;
 
   @UI.hidden: true
@@ -74,4 +80,6 @@ annotate view Z00_C_TRAVEL with
   @UI.hidden: true
   ChangedBy;
 
+  @UI.hidden: true
+  LocChangedAt;
 }
